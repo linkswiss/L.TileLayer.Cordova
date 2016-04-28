@@ -27,10 +27,12 @@ L.TileLayer.Cordova = L.TileLayer.extend({
         // check required options or else choke and die
         options = L.extend({
             folder: null,
+            path: null,
             name: null,
             autocache: false,
             debug: false
         }, options);
+        if (! options.path) throw "L.TileLayer.Cordova: missing required option: path";
         if (! options.folder) throw "L.TileLayer.Cordova: missing required option: folder";
         if (! options.name)   throw "L.TileLayer.Cordova: missing required option: name";
         L.TileLayer.prototype.initialize.call(this, url, options);
@@ -50,15 +52,14 @@ L.TileLayer.Cordova = L.TileLayer.extend({
         if (! window.requestFileSystem && this.options.debug) console.log("L.TileLayer.Cordova: device does not support requestFileSystem");
         if (! window.requestFileSystem) throw "L.TileLayer.Cordova: device does not support requestFileSystem";
         if (myself.options.debug) console.log("Opening filesystem");
-        window.requestFileSystem(
-            LocalFileSystem.PERSISTENT,
-            0,
-            function (fshandle) {
+
+        window.resolveLocalFileSystemURL(myself.options.path
+            ,function (fshandle) {
                 if (myself.options.debug) console.log("requestFileSystem OK " + options.folder);
-                myself.fshandle = fshandle;
-                myself.fshandle.root.getDirectory(
+                //myself.fshandle = fshandle;
+                fshandle.getDirectory(
                     options.folder,
-                    { create:true, exclusive:false },
+                    { create:true },
                     function (dirhandle) {
                         if (myself.options.debug) console.log("getDirectory OK " + options.folder);
                         myself.dirhandle = dirhandle;
@@ -66,8 +67,8 @@ L.TileLayer.Cordova = L.TileLayer.extend({
 
                         // Android's toURL() has a trailing / but iOS does not; better to have 2 than to have 0 !
                         myself._url_offline = dirhandle.toURL() + '/' + [ myself.options.name,'{z}','{x}','{y}' ].join('-') + '.png';
-						
-						if (success_callback) success_callback();
+
+        			if (success_callback) success_callback();
                     },
                     function (error) {
                         if (myself.options.debug) console.log("getDirectory failed (code " + error.code + ")" + options.folder);
@@ -98,18 +99,18 @@ L.TileLayer.Cordova = L.TileLayer.extend({
         // use this layer in online mode
         this.setUrl( this._url_offline );
     },
-	
+
 	/*
 	 * Returns current online/offline state.
 	 */
-	 
+
 	isOnline: function() {
 		return (this._url == this._url_online);
 	},
 	isOffline: function() {
 		return (this._url == this._url_offline);
 	},
-	
+
     /*
      * A set of functions to do the tile downloads, and to provide suporting calculations related thereto
      * In particular, a user interface for downloading tiles en masse, would call calculateXYZListFromPyramid() to egt a list of tiles,
@@ -142,40 +143,40 @@ L.TileLayer.Cordova = L.TileLayer.extend({
 	calculateXYZListFromBounds: function(bounds, zmin, zmax) {
 		// Given a bounds (such as that obtained by calling MAP.getBounds()) and a range of zoom levels, returns the list of XYZ trios comprising that view.
 		// The caller may then call downloadXYZList() with progress and error callbacks to do the fetching.
-		
+
 		var xyzlist = [];
-		
+
 		for (z = zmin; z <= zmax; z++) {
-			
+
 			// Figure out the tile for the northwest point of the bounds.
 			t1_x = this.getX(bounds.getNorthWest().lng, z);
 			t1_y = this.getY(bounds.getNorthWest().lat, z);
-			
+
 			// Figure out the tile for the southeast point of the bounds.
 			t2_x = this.getX(bounds.getSouthEast().lng, z);
 			t2_y = this.getY(bounds.getSouthEast().lat, z);
-			
+
 			// Now that we have the coordinates of the two opposing points (in the correct order!), we can iterate over the square.
 			for (var x = t1_x; x <= t2_x; x++) {
 				for (var y = t1_y; y <= t2_y; y++) {
 					xyzlist.push({ x:x, y:y, z:z });
 				}
 			}
-				
+
 		}
-		
+
 		return xyzlist;
-		
+
 	},
-	
+
 	getX: function(lon, z) {
 		return Math.floor((lon+180)/360*Math.pow(2,z));
 	},
-	
+
 	getY: function(lat, z) {
 		return Math.floor((1-Math.log(Math.tan(lat*Math.PI/180) + 1/Math.cos(lat*Math.PI/180))/Math.PI)/2 *Math.pow(2,z));
 	},
-	
+
     getLng: function(x, z) {
         return (x/Math.pow(2,z)*360-180);
     },
@@ -392,5 +393,5 @@ L.TileLayer.Cordova = L.TileLayer.extend({
             throw "L.TileLayer.Cordova: getCacheContents: Failed to read directory";
         });
     }
-	
+
 }); // end of L.TileLayer.Cordova class

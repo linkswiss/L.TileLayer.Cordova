@@ -53,34 +53,34 @@ L.TileLayer.Cordova = L.TileLayer.extend({
         if (! window.requestFileSystem) throw "L.TileLayer.Cordova: device does not support requestFileSystem";
         if (myself.options.debug) console.log("Opening filesystem");
 
-        window.resolveLocalFileSystemURL(myself.options.path
-            ,function (fshandle) {
-                if (myself.options.debug) console.log("requestFileSystem OK " + options.folder);
-                //myself.fshandle = fshandle;
-                fshandle.getDirectory(
-                    options.folder,
-                    { create:true },
-                    function (dirhandle) {
-                        if (myself.options.debug) console.log("getDirectory OK " + options.folder);
-                        myself.dirhandle = dirhandle;
-                        myself.dirhandle.setMetadata(null, null, { "com.apple.MobileBackup":1});
+      window.resolveLocalFileSystemURL(myself.options.path
+        ,function (fshandle) {
+          if (myself.options.debug) console.log("requestFileSystem OK " + myself.options.folder);
+          //myself.fshandle = fshandle;
+          fshandle.getDirectory(
+            myself.options.folder,
+            { create:true },
+            function (dirhandle) {
+              if (myself.options.debug) console.log("getDirectory OK " + myself.options.folder);
+              myself.dirhandle = dirhandle;
+              myself.dirhandle.setMetadata(null, null, { "com.apple.MobileBackup":1});
 
-                        // Android's toURL() has a trailing / but iOS does not; better to have 2 than to have 0 !
-                        myself._url_offline = dirhandle.toURL() + '/' + [ myself.options.name,'{z}','{x}','{y}' ].join('-') + '.png';
+              // Android's toURL() has a trailing / but iOS does not; better to have 2 than to have 0 !
+              myself._url_offline = dirhandle.toURL() + '/' + [ myself.options.name,'{z}','{x}','{y}' ].join('-') + '.png';
 
-        			if (success_callback) success_callback();
-                    },
-                    function (error) {
-                        if (myself.options.debug) console.log("getDirectory failed (code " + error.code + ")" + options.folder);
-                        throw "L.TileLayer.Cordova: " + options.name + ": getDirectory failed with code " + error.code;
-                    }
-                );
+              if (success_callback) success_callback();
             },
             function (error) {
-                if (myself.options.debug) console.log("requestFileSystem failed (code " + error.code + ")" + options.folder);
-                throw "L.TileLayer.Cordova: " + options.name + ": requestFileSystem failed with code " + error.code;
+              if (myself.options.debug) console.log("getDirectory failed (code " + error.code + ")" + options.folder);
+              throw "L.TileLayer.Cordova: " + options.name + ": getDirectory failed with code " + error.code;
             }
-        );
+          );
+        },
+        function (error) {
+          if (myself.options.debug) console.log("requestFileSystem failed (code " + error.code + ")" + options.folder);
+          throw "L.TileLayer.Cordova: " + options.name + ": requestFileSystem failed with code " + error.code;
+        }
+      );
 
         // done, return ourselves because method chaining is cool
         return this;
